@@ -1,0 +1,78 @@
+
+base_model:  OpenMeditron/Meditron3-8B #swiss-ai/Apertus-8B-Instruct-2509->*
+#plugins:
+#  - axolotl.integrations.cut_cross_entropy.CutCrossEntropyPlugin
+
+datasets: 
+  - path: ${PROJECT_ROOT}/datasets/polyglot1/all_shuffled.jsonl #all_shuffled.jsonl
+    type: chat_template
+    split: train
+
+
+save_on_interrupt: true #!!!
+# This is the path where axolotl caches the prepared dataset
+dataset_prepared_path: ${PROJECT_ROOT} #${PROJECT_ROOT}/last_run_prepared->*
+
+# Output directory where model checkpoints and logs will be saved
+output_dir: ${PROJECT_ROOT}/datasets/polyglot1/models
+# ${PROJECT_ROOT}/models/tutorials/axolotl_apertus_8b->*
+
+# Data loading and processing settings
+shuffle_merged_datasets: true
+dataset_processes: 64 # Avoid RAM OOM issues by lowering this value if needed
+
+# If your model supports flash attention, enable it
+flash_attention: true
+flash_attn_rms_norm: true
+flash_attn_fuse_qkv: true #false->* :save 10~15% VRAM if true
+
+# Enable/Disable sample packing
+sample_packing: true
+sequence_len: 8192 #2048->*
+group_by_length: false
+pad_to_sequence_len: true
+
+# Gradient checkpointing settings: enable to save VRAM
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+
+# Control batch size and number of epochs
+gradient_accumulation_steps: 4
+micro_batch_size: 4
+num_epochs: 3
+
+# Learning rate scheduler and optimizer settings
+optimizer: adamw_torch_fused #adamw_torch->* :adamw_torch_fused a little faster
+optim_args:
+  fused: true
+learning_rate: 1.0e-5
+warmup_ratio: 0.0 #:advise 0.03 a little
+weight_decay: 0.01 #0.05->*
+lr_scheduler: cosine
+cosine_min_lr_ratio: 0.1
+max_grad_norm: 1.0
+
+# Disable evaluation
+evals_per_epoch: 0
+eval_set_size: 0.0
+eval_table_size: null
+
+# Checkpointing and logging settings
+resume_from_checkpoint: null
+logging_steps: 1
+saves_per_epoch: 2
+
+# Model and tokenizer types (usually AutoModelForCausalLM and AutoTokenizer for causal LLMs)
+tokenizer_type: AutoTokenizer
+type: AutoModelForCausalLM
+
+# Weights & Biases logging configuration
+wandb_entity: 
+wandb_log_model: 
+wandb_name: 5gb-8k-64xa100-3epoch #Meditron-Apertus-8B->*
+wandb_project: meditron-3-8b-finetune #tutorial->*
+wandb_watch: null
+
+ddp_find_unused_parameters: true
+deepspeed: /users/yuji/meditron/axolotl_config/deepspeed.json

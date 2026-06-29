@@ -1,0 +1,39 @@
+
+models:
+  evaluated_model:
+    name: "Meditron-8b-dpo"
+    path: "${PROJECT_ROOT}/datasets/polyglot1/models/dpo_medical_v2/checkpoint-100"
+    evaluate: true
+
+  benchmark_model:
+    name: "Meditron-8b"
+    path: "OpenMeditron/Meditron3-8B" #"/mloscratch/homes/bbernath/meditron_instruct/instruction_tuned_model_with_all_instruction_tuning_mixture"
+    evaluate: true
+    
+tasks:
+  - name: "comparison"
+    script: "compare_and_evaluate.py"
+    dataset: "evaluation-dataset/MooveData.jsonl"
+    dataset_name: "MooveData"
+    iterations: 5
+    evaluator: "o1"
+    llm_as_a_judge: True
+    nemotron_as_a_judge: false
+    openai_key: "${OPENAI_KEY}"
+    run_task: false
+
+  - name: "lm-harness"
+    script: "lm-evaluation-harness/lm_eval/__main__.py"
+    args:
+      - "--model=hf"
+      - "--model_args=pretrained=${PROJECT_ROOT}/datasets/polyglot1/models/dpo_medical_v2/checkpoint-100,trust_remote_code=True,device_map=cuda:0"
+      - "--tasks=medmcqa,medqa_4options,pubmedqa"
+      - "--batch_size=1"
+      - "--num_fewshot=0"
+    #args: ["--tasks", "pubmedqa,medmcqa,medqa_4options", "--batch_size=auto", "--trust_remote_code","--output_path", "/results/meditron-8b-mandarin"]
+    #another version suggested by AI:
+    #args: ["--tasks", "pubmedqa,medmcqa,medqa_4options", "--batch_size=auto", "--trust_remote_code", "--device=cuda:0", "--model_args","pretrained=${PROJECT_ROOT}/datasets/polyglot1/models/checkpoint-615,trust_remote_code=True,dtype=bfloat16"]
+    run_task: true
+    
+  - name: "afrimedQA"
+    run_task: false

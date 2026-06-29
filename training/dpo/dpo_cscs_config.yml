@@ -1,0 +1,80 @@
+# DPO Training Configuration for CSCS Cluster
+base_model: "${PROJECT_ROOT}/datasets/polyglot1/models/checkpoint-615"  # Update this path
+model_type: LlamaForCausalLM
+tokenizer_type: AutoTokenizer
+
+load_in_4bit: false
+strict: false
+chat_template: llama3
+# DPO-specific settings
+rl: dpo
+dpo_beta: 0.1  # Controls the strength of the KL penalty
+
+datasets:
+  - path: "${PROJECT_ROOT}/dpo.jsonl"
+    type: chat_template.default
+    ds_type: json
+    field_messages: question
+    field_chosen: chosen
+    field_rejected: rejected
+    message_field_role: role
+    message_field_content: content
+    split: train
+    chosen_labels: chosen
+    rejected_labels: rejected
+    roles:
+      system:
+        - system
+      user:
+        - user
+      assistant:
+        - assistant
+
+# Data processing
+dataset_prepared_path: ${PROJECT_ROOT}/dpo_prepared
+val_set_size: 0.05
+sequence_len: 8192
+sample_packing: false
+pad_to_sequence_len: true
+
+# Training hyperparameters optimized for DPO
+gradient_accumulation_steps: 4  # Reduced for DPO
+micro_batch_size: 1             # Start small for DPO
+num_epochs: 2                   # DPO typically needs fewer epochs
+optimizer: adamw_torch_fused
+#lr_scheduler: cosine
+lr_scheduler: cosine
+#learning_rate: 5.0e-7           # Lower LR for DPO
+learning_rate: 8.0e-7
+warmup_steps: 15
+weight_decay: 0.01
+
+# Memory optimization
+train_on_inputs: false
+group_by_length: false
+bf16: true
+tf32: false
+gradient_checkpointing: true
+flash_attention: true
+
+# Checkpointing and logging
+early_stopping_patience:
+resume_from_checkpoint:
+logging_steps: 1
+saves_per_epoch: 2
+evals_per_epoch: 1
+eval_table_size:
+eval_max_new_tokens: 128
+
+# DeepSpeed integration
+deepspeed: ${PROJECT_ROOT}/zero3_bf16.json
+
+# Weights & Biases logging
+wandb_entity: 
+wandb_log_model:
+wandb_name: dpo-polyglot1-wanlinhu-v2
+wandb_project: Meditron DPO
+wandb_watch: null
+
+# Output directory
+output_dir: ${PROJECT_ROOT}/datasets/polyglot1/models/dpo_medical_v2
